@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Village Adventure — SPM+EA</title>
+<style>
+:root{
+  --brand:#00c2ff; --bg:#0c1222; --glass:rgba(255,255,255,.06); --line:rgba(255,255,255,.12);
+  --text:#eaf2ff; --muted:#9fb0d8; --accent:#ffd86b; --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:radial-gradient(1200px 600px at 70% -10%, #1b2652 0%, var(--bg) 60%), var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;overflow:hidden}
+.wrap{width:100%;height:100%;display:flex;flex-direction:column;padding:8px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#9be2ff);box-shadow:0 6px 18px rgba(0,194,255,.35)}
+h1{margin:0;font-size:20px}
+.tag{color:var(--muted);font-size:12px}
+
+.topbar{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.topbar .step{font-weight:900;letter-spacing:.04em;font-size:14px}
+.grid{flex:1;display:grid;grid-template-columns:260px 1fr 300px;gap:8px;margin-top:6px;overflow:hidden}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:auto}
+.panel h3{margin:0 0 6px;font-size:14px}
+.panel .small{font-size:11px;color:var(--muted)}
+
+.stage{position:relative;width:100%;height:100%;background:#091527;border-radius:10px;border:1px solid var(--line);overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+canvas#world{display:block;width:100%;height:auto;image-rendering: pixelated} .stage{aspect-ratio:4/3;}
+.scan{position:absolute;inset:0;pointer-events:none;opacity:.18;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.06),rgba(255,255,255,.06) 1px,transparent 1px,transparent 3px)}
+
+.dialog{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(0,0,0,.85);border:2px solid #2a385f;border-radius:8px;padding:8px;display:none;font-size:13px}
+.dialog.show{display:block}
+.dialog .t{font-weight:900;margin-bottom:4px}
+.dialog .actions{display:flex;gap:6px;margin-top:4px}
+
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,16,.6);backdrop-filter:blur(2px);z-index:40}
+.overlay.show{display:flex}
+.sheet{width:min(820px,92vw);background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 22px 60px rgba(0,0,0,.55)}
+
+button{background:var(--brand);border:none;border-radius:8px;padding:6px 10px;color:#001725;font-weight:800;cursor:pointer;box-shadow:0 6px 14px rgba(0,194,255,.25);font-size:13px}
+button.ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#eaf2ff;box-shadow:none}
+
+#screen-persona.hidden,#screen-game.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"></div>
+    <div>
+      <h1>Village Adventure — <span style="color:#9fe8ff">SPM + EA</span></h1>
+      <div class="tag">Retro town + modern panels • Persona → explore → 3 initiatives → 2 events → weighted score</div>
+    </div>
+  </header>
+
+  <section id="screen-persona" class="panel">
+    <h3>Step 1 — Choose your persona</h3>
+    <div class="small">Three roles for focused play</div>
+    <div id="persona-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px;margin-top:6px"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:6px"><button id="btn-start" disabled>Enter the village</button></div>
+  </section>
+
+  <section id="screen-game" class="hidden" style="flex:1;display:flex;flex-direction:column">
+    <div id="topbar" class="topbar"><div class="step" id="step-text">Step 2 — Choose 3 initiatives</div><div class="small">Arrows = move • E = interact • R = restart</div></div>
+    <div class="grid">
+      <aside class="panel" id="hud"></aside>
+      <main class="stage"><canvas id="world" width="1024" height="768"></canvas><div class="scan"></div><div id="dialog" class="dialog"><div class="t" id="dlg-title"></div><div id="dlg-body"></div><div class="actions" id="dlg-actions"></div></div></main>
+      <aside class="panel" id="details"></aside>
+    </div>
+  </section>
+
+  <div id="overlay" class="overlay"><div class="sheet"><h2>Results</h2><div id="results"></div><div style="margin-top:8px;display:flex;justify-content:flex-end"><button id="btn-replay">Replay</button></div></div></div>
+</div>
+
+<script>
+// Resized full canvas
+const cvs=document.getElementById('world');
+cvs.width=window.innerWidth*0.55;
+cvs.height=window.innerHeight*0.7;
+const ctx=cvs.getContext('2d');
+
+// Improved player sprite (head, face, body, arms, legs)
+const player={x:10,y:10,px:320,py:320,dir:'down',frame:0};
+function drawPlayer(){ const X=player.px, Y=player.py; ctx.save();
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(X+16,Y+30,10,4,0,0,Math.PI*2); ctx.fill();
+  // animation frame (3-frame walk)
+  const f=Math.floor(player.frame)%3;
+  // head & hair
+  ctx.fillStyle='#f3d2b2'; ctx.fillRect(X+10,Y+6,12,12);
+  ctx.fillStyle='#2c2c2c'; ctx.fillRect(X+10,Y+6,12,4); ctx.fillRect(X+9,Y+8,2,6); ctx.fillRect(X+22,Y+8,2,6);
+  // eyes & mouth
+  ctx.fillStyle='#111'; if(player.dir==='left'){ ctx.fillRect(X+12,Y+11,2,2);} else if(player.dir==='right'){ ctx.fillRect(X+18,Y+11,2,2);} else { ctx.fillRect(X+14,Y+11,2,2); ctx.fillRect(X+18,Y+11,2,2);} ctx.fillStyle='#a33'; ctx.fillRect(X+14,Y+14,4,1);
+  // torso (jacket) + zipper
+  ctx.fillStyle='#2563eb'; ctx.fillRect(X+9,Y+18,14,12);
+  ctx.fillStyle='#93c5fd'; ctx.fillRect(X+15,Y+18,2,12);
+  // backpack
+  ctx.fillStyle='#0e7490'; ctx.fillRect(X+7,Y+19,4,10);
+  // arms
+  ctx.fillStyle='#2563eb'; if(f===0){ ctx.fillRect(X+6,Y+20,4,8); ctx.fillRect(X+22,Y+18,4,8);} else if(f===1){ ctx.fillRect(X+6,Y+18,4,8); ctx.fillRect(X+22,Y+20,4,8);} else { ctx.fillRect(X+6,Y+19,4,8); ctx.fillRect(X+22,Y+19,4,8);} 
+  ctx.fillStyle='#f3d2b2'; ctx.fillRect(X+6,Y+27,4,3); ctx.fillRect(X+22,Y+27,4,3);
+  // legs
+  ctx.fillStyle='#1f2937'; if(f===0){ ctx.fillRect(X+10,Y+30,5,10); ctx.fillRect(X+17,Y+28,5,12);} else if(f===1){ ctx.fillRect(X+10,Y+28,5,12); ctx.fillRect(X+17,Y+30,5,10);} else { ctx.fillRect(X+10,Y+29,5,11); ctx.fillRect(X+17,Y+29,5,11);} 
+  // shoes
+  ctx.fillStyle='#111827'; ctx.fillRect(X+10,Y+40,5,3); ctx.fillRect(X+17,Y+40,5,3);
+  ctx.restore();
+}
+
+// TODO: Integrate rest of the logic from earlier version here (personas, initiatives, events, HUD, scoring)
+</script>
+</body>
+</html>
