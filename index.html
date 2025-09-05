@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Sprint — SPM + EA</title>
+  <style>
+    :root{
+      --brand:#3a7afe; /* theme */
+      --bg:#0b1020;
+      --panel:#141b34;
+      --muted:#96a0c2;
+      --ok:#14b8a6;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --good:#22c55e;
+      --white:#eef2ff;
+      --v:#60a5fa; /* Value */
+      --r:#f97316; /* Risk */
+      --c:#34d399; /* Cost */
+      --f:#a78bfa; /* Fit */
+      --t:#22d3ee; /* TTV */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: radial-gradient(1200px 600px at 70% -10%, #1b2552 0%, #0b1020 60%), var(--bg); color:var(--white)}
+    .wrap{max-width:1200px;margin:0 auto;padding:24px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:20px;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--brand),#9bb7ff);box-shadow:0 8px 24px rgba(58,122,254,.35)}
+    h1{font-size:24px;margin:0}
+    .tag{color:var(--muted);font-size:14px}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.08); box-shadow:0 10px 30px rgba(0,0,0,.3); border-radius:18px; padding:18px}
+    .grid{display:grid; gap:16px}
+    .grid.personas{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+    .grid.initiatives{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+
+    /* Persona card — Option A (horizontal) */
+    .persona{cursor:pointer; transition:.2s transform, .2s box-shadow; border:1px solid transparent; overflow:hidden; display:grid; grid-template-columns:72px 1fr; gap:12px; align-items:center}
+    .persona:hover{transform:translateY(-2px)}
+    .persona.selected{outline:2px solid var(--brand); box-shadow:0 0 0 6px rgba(58,122,254,.15)}
+    .persona h3{margin:0 0 4px;text-align:left}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background: rgba(58,122,254,.12); color:#cfe0ff; font-size:12px; margin-top:8px}
+    .persona .avatar{width:64px;height:64px;border-radius:14px;display:block;overflow:hidden;box-shadow:0 8px 18px rgba(0,0,0,.35)}
+    .persona .p-body{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left}
+
+    /* (weights styles kept but unused) */
+    .weights{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px;grid-auto-rows:36px}
+    .wchip{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.05);font-size:12px;justify-content:center;height:36px;min-height:36px;white-space:nowrap;width:100%}
+    .wlab{font-weight:800;border-radius:6px;padding:2px 6px;color:#0b1020;display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:22px}
+    .wchip.v .wlab{background:var(--v)}
+    .wchip.r .wlab{background:var(--r)}
+    .wchip.c .wlab{background:var(--c)}
+    .wchip.f .wlab{background:var(--f)}
+    .wchip.t .wlab{background:var(--t)}
+
+    .initiative{position:relative; cursor:pointer; border:1px dashed rgba(255,255,255,.1); transition:.2s}
+    .initiative:hover{transform:translateY(-2px)}
+    .initiative.selected{border:1px solid var(--brand); box-shadow:0 0 0 6px rgba(58,122,254,.12)}
+    .initiative.mini{cursor:default}
+    .badge{position:absolute;top:10px;right:10px;background:var(--brand);color:white;border-radius:999px;padding:4px 8px;font-size:12px}
+    .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+    .metric{background:rgba(255,255,255,.06);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:58px;text-align:left}
+    .metric .lab{font-size:11px;color:#c8d1ff;line-height:1;margin-bottom:4px}
+    .metric .val{font-weight:700}
+
+    .footer{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-top:14px;color:var(--muted)}
+    .bar{height:10px;background:#1f2a5a;border-radius:999px;overflow:hidden}
+    .bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#8bb3ff)}
+
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button{background:var(--brand);color:white;border:none;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(58,122,254,.3);transition:.2s}
+    button:hover{transform:translateY(-1px)}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#dbe4ff;box-shadow:none}
+    button[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+
+    .hidden{display:none}
+    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px}
+    .subtitle{color:#c6cffc}
+
+    .event{border-left:4px solid var(--brand)}
+
+    .context{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+    .chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:6px 10px;border-radius:999px;font-size:12px}
+    .chip .dot{width:8px;height:8px;border-radius:999px;background:var(--brand)}
+
+    .scoregrid{display:grid;grid-template-columns:1fr 1fr; gap:16px}
+    .gauge{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px}
+    .gauge h4{margin:0 0 8px}
+    .progress{height:14px;background:#1f2a5a;border-radius:999px;overflow:hidden}
+    .progress > span{display:block;height:100%;background:linear-gradient(90deg,var(--ok), var(--brand));}
+
+    .verdict{font-size:18px; line-height:1.3}
+    .small{font-size:12px;color:var(--muted)}
+    .kicker{font-size:12px; letter-spacing:.12em; color:#bcd0ff; text-transform:uppercase}
+    .warn{color:#ffdba9}
+
+    .top-controls{display:flex;align-items:center;gap:8px}
+    .toggle{background:transparent;border:1px solid rgba(255,255,255,.25);color:#e6ecff;border-radius:10px;padding:8px 10px;cursor:pointer}
+
+    /* Confetti */
+    .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+    .dot{position:absolute;width:8px;height:8px;border-radius:2px;background:var(--brand);opacity:.9;animation:fall 1.6s ease-out forwards}
+    @keyframes fall{to{transform:translateY(100vh) rotate(360deg);opacity:0}}
+
+    @media (max-width: 720px){
+      .grid.initiatives{grid-template-columns:1fr}
+      .scoregrid{grid-template-columns:1fr}
+      h1{font-size:20px}
+    }
+      .metric.v{background:color-mix(in srgb, var(--v) 18%, transparent);border:1px solid color-mix(in srgb, var(--v) 40%, transparent)}
+    .metric.r{background:color-mix(in srgb, var(--r) 18%, transparent);border:1px solid color-mix(in srgb, var(--r) 40%, transparent)}
+    .metric.c{background:color-mix(in srgb, var(--c) 18%, transparent);border:1px solid color-mix(in srgb, var(--c) 40%, transparent)}
+    .metric.f{background:color-mix(in srgb, var(--f) 18%, transparent);border:1px solid color-mix(in srgb, var(--f) 40%, transparent)}
+    .metric.t{background:color-mix(in srgb, var(--t) 18%, transparent);border:1px solid color-mix(in srgb, var(--t) 40%, transparent)}
+    .metric.x{background:color-mix(in srgb, var(--muted) 16%, transparent);border:1px solid color-mix(in srgb, var(--muted) 35%, transparent)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Strategic Planning Rumble</h1>
+          <div class="tag">Draft a strategy, survive the storms, post a score your CIO can’t ignore</div>
+        </div>
+      </div>
+      <div class="top-controls" aria-label="Global controls">
+        <button id="btn-mute" class="toggle" aria-pressed="true" title="Toggle sound">🔇 Sound off</button>
+        <button id="btn-theme" class="toggle" title="Switch theme">🎨 Theme</button>
+        <button id="btn-restart" class="toggle" title="Restart game">↻ Restart</button>
+      </div>
+    </header>
+
+    <!-- Hero banner -->
+    <div class="card" id="hero-pill" style="margin:0 0 16px; padding:12px 16px; font-weight:700;">
+      SPM: Strategise, Align Deliver, EA: Enforce Standards and Reduce Tech Debt, Together: Faster Value with Less Risk
+    </div>
+
+    <!-- Screen: Persona -->
+    <section id="screen-persona" class="card" aria-labelledby="persona-title">
+      <div class="center">
+        <div class="kicker">Step 1</div>
+        <h2 id="persona-title" style="margin:0">Pick your persona</h2>
+      </div>
+      <div class="grid personas" id="persona-grid" style="margin-top:12px"></div>
+      <div class="actions" style="justify-content:flex-end">
+        <button id="btn-persona-next" disabled>Start</button>
+      </div>
+    </section>
+
+    <!-- Screen: Constraint -->
+    <section id="screen-constraint" class="card hidden" aria-labelledby="constraint-title">
+      <div class="kicker">Step 2</div>
+      <h2 style="margin-top:4px">Constraint in play</h2>
+      <div class="context" id="context-constraint"></div>
+      <div id="constraint-box" class="card event" style="margin-top:8px">
+        <h3 id="constraint-title" style="margin:0 0 4px"></h3>
+        <div id="constraint-desc" class="subtitle"></div>
+      </div>
+      <div class="actions" style="justify-content:flex-end">
+        <button id="btn-constraint-next">Continue</button>
+      </div>
+    </section>
+
+    <!-- Screen: Initiatives -->
+    <section id="screen-initiatives" class="card hidden" aria-labelledby="init-title">
+      <div class="kicker">Step 3</div>
+      <h2 id="init-title" style="margin-top:4px">Pick 3 initiatives</h2>
+      <div class="context" id="context-bar"></div>
+      <div class="subtitle" id="budget-sub"></div>
+      <div class="bar" style="margin-top:8px" aria-label="Budget used"><span id="budget-bar" style="width:0%"></span></div>
+      <div class="grid initiatives" id="initiative-grid" style="margin-top:16px"></div>
+      <div class="footer">
+        <div><strong>Selected:</strong> <span id="selected-count">0</span>/3 • <strong>Cost used:</strong> <span id="cost-used">0</span>/<span id="cost-cap">10</span></div>
+        <div class="actions">
+          <button class="ghost" id="btn-clear">Clear</button>
+          <button id="btn-lock" disabled>Lock choices</button>
+        </div>
+      </div>
+      <div id="hint" class="small" style="margin-top:6px"></div>
+    </section>
+
+    <!-- Screen: Events -->
+    <section id="screen-events" class="card hidden" aria-labelledby="events-title">
+      <div class="kicker">Step 4</div>
+      <h2 id="events-title" style="margin-top:4px">Surprise events</h2>
+      <div class="context" id="context-events"></div>
+      <div id="event-box" class="card event" style="margin-top:8px">
+        <h3 id="event-title" style="margin:0 0 6px"></h3>
+        <div id="event-desc" class="subtitle" style="margin-bottom:8px"></div>
+        <div id="event-actions" class="actions"></div>
+      </div>
+      <div class="actions" style="justify-content:flex-end">
+        <button id="btn-next-event" class="hidden">Next</button>
+      </div>
+    </section>
+
+    <!-- Screen: Score -->
+    <section id="screen-score" class="card hidden" aria-labelledby="score-title">
+      <div class="kicker">Final</div>
+      <h2 id="score-title" style="margin-top:4px">Your results</h2>
+      <div class="context" id="context-score"></div>
+      <div class="scoregrid" style="margin-top:10px">
+        <div class="gauge"><h4>Value</h4><div class="progress"><span id="g-value" style="width:0%"></span></div></div>
+        <div class="gauge"><h4>Risk (lower is better)</h4><div class="progress"><span id="g-risk" style="width:0%"></span></div></div>
+        <div class="gauge"><h4>Cost Discipline</h4><div class="progress"><span id="g-cost" style="width:0%"></span></div></div>
+        <div class="gauge"><h4>Architecture Fit</h4><div class="progress"><span id="g-fit" style="width:0%"></span></div></div>
+        <div class="gauge" style="grid-column:1 / -1"><h4>Time‑to‑Value</h4><div class="progress"><span id="g-ttv" style="width:0%"></span></div></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div id="final-score" style="font-size:32px;font-weight:800"></div>
+        <div id="verdict" class="verdict" style="margin-top:6px"></div>
+        <div class="small" style="margin-top:10px">SPM → prioritize by strategy, budget, capacity. EA → enforce standards and reduce tech debt. Together → faster value with less risk.</div>
+      </div>
+      <div class="actions" style="justify-content:space-between;margin-top:14px">
+        <button class="ghost" id="btn-download-state">Copy summary</button>
+        <div>
+          <button class="ghost" id="btn-replay">Play Again</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+
+  <script>
+    // ---------- Tiny SFX (no external files) ----------
+    class SFX{
+      constructor(){ this.ctx = null; this.muted = true; }
+      ensure(){ if(!this.ctx) this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }
+      tone(freq=660, dur=0.08, type='sine', gain=0.04){
+        if(this.muted) return; this.ensure();
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain(); g.gain.value = gain; o.frequency.value=freq; o.type=type;
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t); o.stop(t+dur);
+      }
+      dramatic(){
+        if(this.muted) return; this.ensure();
+        const t = this.ctx.currentTime;
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type='sawtooth';
+        o.frequency.setValueAtTime(720, t);
+        o.frequency.exponentialRampToValueAtTime(160, t+0.6);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.08, t+0.05);
+        g.gain.exponentialRampToValueAtTime(0.0001, t+0.6);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(t); o.stop(t+0.65);
+      }
+      select(){this.tone(740,0.06,'triangle',0.05)}
+      error(){this.tone(180,0.14,'square',0.06)}
+      ok(){this.tone(520,0.1,'sawtooth',0.05)}
+      wow(){this.tone(880,0.18,'triangle',0.06)}
+    }
+    const sfx = new SFX();
+
+    // Theme toggle (light/dark accent)
+    document.getElementById('btn-theme').addEventListener('click',()=>{
+      const cur = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim();
+      const palette = ['#3a7afe','#22c55e','#e879f9','#f59e0b','#06b6d4'];
+      const next = palette[(palette.indexOf(cur)+1)%palette.length] || palette[0];
+      document.documentElement.style.setProperty('--brand', next);
+      sfx.select();
+    });
+    const btnMute = document.getElementById('btn-mute');
+    btnMute.addEventListener('click',()=>{
+      sfx.muted = !sfx.muted;
+      btnMute.textContent = sfx.muted ? '🔇 Sound off' : '🔊 Sound on';
+      btnMute.setAttribute('aria-pressed', String(!sfx.muted));
+      if(!sfx.muted) sfx.ok();
+    });
+    document.getElementById('btn-restart').addEventListener('click',()=>{ location.reload(); });
+
+    // ---------- Data ----------
+    const personas = [
+      {id:'hos', name:'Head of Strategy', focus:'Strategy & Outcomes', desc:"Sets the North Star. Keeps OKRs honest.", weights:{value:35,risk:15,cost:10,fit:15,ttv:25}},
+      {id:'ea', name:'Enterprise Architect', focus:'Architecture, Risk', desc:"Guardrails guru. Allergic to tech debt.", weights:{value:15,risk:20,cost:10,fit:40,ttv:15}},
+      {id:'pm', name:'Portfolio Manager', focus:'Value, Cost, TTV', desc:"Budget ninja. Ships value (no Gantt required).", weights:{value:30,risk:15,cost:25,fit:10,ttv:20}},
+    ];
+
+    const initiatives = [
+      {id:'app', name:'Customer App Revamp', desc:'Modernize UX, features, journeys', value:5, risk:2, cost:4, fit:3, ttv:5},
+      {id:'erp', name:'ERP Consolidation', desc:'Merge vendors & instances', value:3, risk:3, cost:5, fit:4, ttv:2},
+      {id:'data', name:'Data Platform (Lakehouse)', desc:'Unified analytics & ML base', value:4, risk:2, cost:4, fit:3, ttv:2},
+      {id:'ai', name:'AI Service Assistant', desc:'GenAI for support & ops', value:4, risk:2, cost:2, fit:2, ttv:5},
+      {id:'cyber', name:'Cyber Hardening + Zero Trust', desc:'Reduce attack surface', value:3, risk:5, cost:3, fit:5, ttv:3},
+      {id:'cost', name:'Cloud Cost Optimization', desc:'FinOps & rightsizing', value:2, risk:3, cost:1, fit:5, ttv:4},
+      {id:'decom', name:'Legacy Decommission (App X)', desc:'Remove obsolete system', value:2, risk:4, cost:2, fit:5, ttv:3},
+      {id:'comp', name:'Compliance Automation', desc:'Controls‑as‑Code & evidence', value:3, risk:5, cost:2, fit:4, ttv:3},
+    ];
+
+    const constraints = [
+      {id:'cloudfirst', title:'Cloud‑First Policy', desc:'Cloud‑aligned initiatives gain architecture fit. Traditional ERP gets a slight penalty.', apply:(eff)=>{
+        for(const e of eff){
+          if(['ai','cost','data'].includes(e.id)) e.fit = clamp(e.fit + 1);
+          if(e.id==='erp') e.fit = clamp(e.fit - 1);
+        }
+      }},
+      {id:'freeze', title:'Hiring Freeze', desc:'Capacity tight. Budget cap reduced by 1.', budgetDelta:-1, apply:(eff)=>{}},
+      {id:'datares', title:'Data Residency Rule', desc:'If you build the Data Platform without Compliance Automation, risk reduction is weaker.', apply:(eff, chosenIds)=>{
+        const pickedData = chosenIds.has('data');
+        const hasComp = chosenIds.has('comp');
+        if(pickedData && !hasComp){
+          const e = eff.find(x=>x.id==='data');
+          if(e) e.risk = clamp(e.risk - 2); // less risk reduction
+        }
+      }},
+    ];
+
+    const events = [
+      {id:'cut', title:'Budget Cut — 20%', desc:'Leadership trims budget. You must operate leaner.', run: budgetCut},
+      {id:'outage', title:'Critical Outage', desc:'Security incident tests resilience.', run: outageEvent},
+      {id:'vendor', title:'Vendor Sunset', desc:'Key ERP vendor changes roadmap.', run: vendorEvent},
+      {id:'audit', title:'Audit Surprise', desc:'Regulator requests evidence earlier than planned.', run: auditEvent},
+    ];
+
+    // ---------- State ----------
+    let state = {
+      persona:null,
+      constraint:null,
+      allowedBudget:10,
+      selected:new Set(),
+      eventQueue:[],
+      adjustments:{byCard:{}, global:{value:0,risk:0,cost:0,fit:0,ttv:0, finalPenalty:0}},
+    };
+
+    // ---------- Utils ----------
+    function clamp(v){return Math.max(1, Math.min(5, v));}
+    function $(id){return document.getElementById(id)}
+    const shuffle = arr => arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+
+    // Avatar generator (moved up so persona render can use it)
+    const avatarCache = {};
+    function randPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+    function avatarFor(id){
+      if(avatarCache[id]) return avatarCache[id];
+      // persona palettes
+      const palettes = { hos:{a:'#0ea5e9',b:'#38bdf8'}, ea:{a:'#8b5cf6',b:'#a78bfa'}, pm:{a:'#10b981',b:'#34d399'} };
+      const skinTones = ['#FEE1D6','#F8C9A1','#E2AE7E','#C28C62','#9E6A48'];
+      const hairTones = ['#1f2937','#3f2a1d','#6b4a2f','#0f172a','#8b5a2b'];
+      const gender = (id==='ea') ? 'f' : 'm';
+      const base = palettes[id] || {a:'#64748b',b:'#94a3b8'};
+      const skin = randPick(skinTones); const hair = randPick(hairTones);
+      const svg = avatarSVG(id,{gender,skin,hair,base});
+      avatarCache[id] = svg; return svg;
+    }
+    function avatarSVG(id,t){
+      const gId = `bg_${id}`;
+      const eye = '#111827';
+      const mouth = '#111827';
+      // female hair behind head; male hair top
+      const hairPath = t.gender==='f'
+        ? `<path d="M16 28 q24 -18 48 0 v18 q-6 16 -24 18 q-18 -2 -24 -18 z" fill="${t.hair}"/>`
+        : `<path d="M22 28 q18 -12 36 0 q-2 -8 -18 -10 q-16 2 -18 10 z" fill="${t.hair}"/>`;
+      return `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="${gId}" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="${t.base.a}"/>
+            <stop offset="100%" stop-color="${t.base.b}"/>
+          </linearGradient>
+        </defs>
+        <rect rx="16" width="80" height="80" fill="url(#${gId})"/>
+        ${hairPath}
+        <circle cx="40" cy="36" r="16" fill="${t.skin}"/>
+        <circle cx="33" cy="34" r="2" fill="#111827"/>
+        <circle cx="47" cy="34" r="2" fill="#111827"/>
+        <rect x="34" y="44" width="12" height="2" rx="1" fill="#111827" opacity=".55"/>
+      </svg>`;
+    }
+
+    // ---------- Persona Screen (Option A layout) ----------
+    try{
+      const personaGrid = $('persona-grid');
+      personaGrid.innerHTML = '';
+      personas.forEach(p=>{
+        const card = document.createElement('div');
+        card.className = 'card persona';
+        card.setAttribute('tabindex','0');
+        card.setAttribute('role','button');
+        card.setAttribute('aria-label', `Select persona ${p.name}`);
+
+        const avatarWrap = document.createElement('div');
+        avatarWrap.className = 'avatar';
+        avatarWrap.innerHTML = avatarFor(p.id);
+
+        const body = document.createElement('div');
+        body.className = 'p-body';
+        const title = document.createElement('h3');
+        title.textContent = p.name;
+        const desc = document.createElement('div');
+        desc.className = 'small'; desc.style.opacity = '.9';
+        desc.textContent = p.desc;
+        const pill = document.createElement('div');
+        pill.className = 'pill'; pill.textContent = p.focus;
+        body.appendChild(title); body.appendChild(desc); body.appendChild(pill);
+
+        card.appendChild(avatarWrap); card.appendChild(body);
+
+        const selectPersona = ()=>{ document.querySelectorAll('.persona').forEach(x=>x.classList.remove('selected')); card.classList.add('selected'); state.persona = p; $('btn-persona-next').disabled=false; sfx.select(); };
+        card.addEventListener('click', selectPersona);
+        card.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectPersona(); }});
+        personaGrid.appendChild(card);
+      });
+    } catch(err) {
+      const grid = $('persona-grid');
+      if(grid){
+        console.error('Persona render error:', err);
+        grid.textContent = 'Render error: ' + (err && err.message ? err.message : String(err));
+      }
+    }
+
+    // Keyboard: Enter to start if persona picked
+    window.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' && !$('screen-persona').classList.contains('hidden')){
+        if(!$('btn-persona-next').disabled) $('btn-persona-next').click();
+      }
+    });
+
+    // ---------- Constraint Next ----------
+    $('btn-constraint-next').addEventListener('click',()=>{
+      initInitiatives();
+      show('screen-constraint', false);
+      show('screen-initiatives', true);
+      sfx.ok();
+    });
+
+    // ---------- Initiatives Screen ----------
+    function initInitiatives(){
+      const grid = $('initiative-grid'); grid.innerHTML='';
+      state.selected.clear();
+      updateSelUI();
+      $('budget-sub').textContent = `Budget cap: ${state.allowedBudget}. Pick any 3 under cap. Tip: use number keys 1–8 to toggle.`;
+      $('cost-cap').textContent = state.allowedBudget;
+
+      // show context chips (persona + constraint)
+      const contextBar = $('context-bar');
+      contextBar.innerHTML = `<span class="chip" title="Selected persona"><span class="avatar">${avatarFor(state.persona.id)}</span> ${state.persona.name}</span>
+        <span class="chip" title="${state.constraint.desc}"><span class="dot"></span> Constraint: ${state.constraint.title}</span>`;
+
+      initiatives.forEach((card, idx)=>{
+        const el = document.createElement('div');
+        el.className='card initiative';
+        el.setAttribute('data-id', card.id);
+        el.setAttribute('tabindex','0');
+        el.setAttribute('role','button');
+        el.setAttribute('aria-label',`Toggle initiative ${card.name} (cost ${card.cost})`);
+        el.innerHTML = `
+          <div class="badge">${idx+1} • Cost ${card.cost}</div>
+          <h3 style="margin:0 0 6px">${card.name}</h3>
+          <div class="small">${card.desc}</div>
+          <div class=\"metrics\">
+            <div class=\"metric v\"><div class=\"lab\">Value<\/div><div class=\"val\">${card.value}<\/div><\/div>
+            <div class=\"metric r\"><div class=\"lab\">Risk↓<\/div><div class=\"val\">${card.risk}<\/div><\/div>
+            <div class=\"metric f\"><div class=\"lab\">Fit<\/div><div class=\"val\">${card.fit}<\/div><\/div>
+            <div class=\"metric t\"><div class=\"lab\">TTV<\/div><div class=\"val\">${card.ttv}<\/div><\/div>
+          <\/div>`;
+        el.addEventListener('click',()=>togglePick(card.id));
+        el.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); togglePick(card.id); }});
+        grid.appendChild(el);
+      });
+
+      $('btn-clear').onclick=()=>{state.selected.clear();updateSelUI(); sfx.select();};
+      $('btn-lock').onclick=lockChoices;
+      $('hint').textContent='Balance quick wins (TTV) with standards (Fit). Press Enter to lock once 3 selected.';
+
+      // Number keys to toggle (1..8)
+      window.onkeydown = (e)=>{
+        if($('screen-initiatives').classList.contains('hidden')) return;
+        if(e.key>='1' && e.key<='8'){
+          const idx = parseInt(e.key,10)-1; if(initiatives[idx]) togglePick(initiatives[idx].id);
+        }
+        if(e.key==='Enter' && !$('btn-lock').disabled) $('btn-lock').click();
+      };
+    }
+
+    function togglePick(id){
+      const already = state.selected.has(id);
+      if(already){ state.selected.delete(id); updateSelUI(); sfx.select(); return; }
+      if(state.selected.size>=3){ flash('You can only pick 3 initiatives.'); sfx.error(); return; }
+      const costUsed = totalCost([...state.selected, id]);
+      if(costUsed>state.allowedBudget){ flash(`Over budget. Cap is ${state.allowedBudget}.`); sfx.error(); return; }
+      state.selected.add(id); updateSelUI(); sfx.select();
+    }
+
+    function totalCost(ids){ return ids.reduce((sum,id)=>sum + initiatives.find(x=>x.id===id).cost, 0); }
+
+    function updateSelUI(){
+      document.querySelectorAll('.initiative').forEach(el=>{
+        const id = el.getAttribute('data-id');
+        el.classList.toggle('selected', state.selected.has(id));
+      });
+      const used = totalCost([...state.selected]);
+      const pct = Math.min(100, Math.round(100*used/Math.max(1,state.allowedBudget)));
+      $('budget-bar').style.width = pct+'%';
+      $('selected-count').textContent = state.selected.size;
+      $('cost-used').textContent = used;
+      $('btn-lock').disabled = !(state.selected.size===3);
+    }
+
+    function lockChoices(){
+      // Prepare two random events
+      state.eventQueue = shuffle(events).slice(0,2);
+      // propagate context to Events
+      $('context-events').innerHTML = `<span class=\"chip\" title=\"Selected persona\"><span class=\"avatar\">${avatarFor(state.persona.id)}</span> ${state.persona.name}</span>
+        <span class=\"chip\" title=\"${state.constraint.desc}\"><span class=\"dot\"></span> Constraint: ${state.constraint.title}</span>`;
+      show('screen-initiatives', false); show('screen-events', true);
+      runNextEvent(); sfx.ok();
+    }
+
+    // ---------- Events ----------
+    function runNextEvent(){
+      if(state.eventQueue.length===0){ return finish(); }
+      const ev = state.eventQueue.shift();
+      $('event-title').textContent = ev.title;
+      $('event-desc').textContent = ev.desc;
+      $('event-actions').innerHTML='';
+      $('btn-next-event').classList.add('hidden');
+      // Execute event handler
+      ev.run();
+    }
+
+    function budgetCut(){
+      // Always a bad vibe
+      sfx.dramatic();
+      // Reduce budget by 20% (ceil) at least by 1
+      const oldCap = state.allowedBudget;
+      const newCap = Math.max(1, Math.ceil(oldCap*0.8));
+      state.allowedBudget = newCap;
+      const used = totalCost([...state.selected]);
+      const box = $('event-actions');
+      if(used>newCap){
+        const msg = document.createElement('div');
+        msg.className='subtitle';
+        msg.textContent = `Budget reduced from ${oldCap} → ${newCap}. You must drop one initiative (currently ${used}/${newCap}).`;
+        box.appendChild(msg);
+        const tiles = document.createElement('div'); tiles.className='grid initiatives'; box.appendChild(tiles);
+        // Show tiles for each selected card to drop
+        [...state.selected].forEach(id=>{
+          const card = initiatives.find(x=>x.id===id);
+          const t = document.createElement('div'); t.className='card initiative mini'; t.setAttribute('data-id', id);
+          t.innerHTML = `
+            <div class="badge">Cost ${card.cost}</div>
+            <h3 style="margin:0 0 6px">${card.name}</h3>
+            <div class="small" style="margin-bottom:6px">${card.desc}</div>
+            <div class="metrics" style="margin-bottom:8px">
+              <div class="metric v"><div class="lab">Value</div><div class="val">${card.value}</div></div>
+              <div class="metric r"><div class="lab">Risk↓</div><div class="val">${card.risk}</div></div>
+              <div class="metric f"><div class="lab">Fit</div><div class="val">${card.fit}</div></div>
+              <div class="metric t"><div class="lab">TTV</div><div class="val">${card.ttv}</div></div>
+            </div>
+            <button class="ghost">Drop this</button>`;
+          t.querySelector('button').onclick = ()=>{
+            state.selected.delete(id);
+            updateSelUI();
+            box.innerHTML = '<div class="subtitle">Dropped. Operating leaner.</div>';
+            const next = document.createElement('button'); next.textContent='Confirm'; next.onclick=()=>{$('btn-next-event').classList.remove('hidden');};
+            box.appendChild(next);
+            sfx.select();
+          };
+          tiles.appendChild(t);
+        });
+      } else {
+        const ok = document.createElement('div'); ok.className='subtitle'; ok.textContent = `Budget reduced from ${oldCap} → ${newCap}. You are still within cap (${used}/${newCap}).`;
+        box.appendChild(ok);
+        $('btn-next-event').classList.remove('hidden');
+      }
+      $('btn-next-event').onclick = ()=>{ sfx.ok(); runNextEvent(); };
+    }
+
+    function outageEvent(){
+      const box = $('event-actions');
+      const hasCyber = state.selected.has('cyber');
+      const note = document.createElement('div');
+      note.className='subtitle';
+      if(hasCyber){
+        note.textContent = 'Your hardening pays off. Risk score improves slightly (+3).';
+        state.adjustments.global.risk += 3;
+      } else {
+        note.textContent = 'Without hardening, the incident hurts (−8 Risk).';
+        state.adjustments.global.risk -= 8;
+        sfx.dramatic();
+      }
+      box.appendChild(note);
+      const next = document.createElement('button'); next.textContent='Next'; next.onclick=()=>{ sfx.ok(); runNextEvent(); }; box.appendChild(next);
+    }
+
+    function vendorEvent(){
+      const box = $('event-actions');
+      const hasERP = state.selected.has('erp');
+      const note = document.createElement('div');
+      note.className='subtitle';
+      if(hasERP){
+        note.textContent = 'Vendor shift: ERP value +2, but rollout slows (TTV −1).';
+        ensureCardAdj('erp');
+        state.adjustments.byCard['erp'].value += 2;
+        state.adjustments.byCard['erp'].ttv -= 1;
+        sfx.error();
+      } else {
+        note.textContent = 'ERP not in scope — minimal impact.';
+      }
+      box.appendChild(note);
+      const next = document.createElement('button'); next.textContent='Next'; next.onclick=()=>{ sfx.ok(); runNextEvent(); }; box.appendChild(next);
+    }
+
+    function auditEvent(){
+      const box = $('event-actions');
+      const hasComp = state.selected.has('comp');
+      const note = document.createElement('div');
+      note.className='subtitle';
+      if(hasComp){
+        note.textContent = 'You demonstrate automated evidence: Risk improves (+3).';
+        state.adjustments.global.risk += 3;
+      } else {
+        note.textContent = 'No automation — final score penalty (−10).';
+        state.adjustments.global.finalPenalty -= 10;
+        sfx.dramatic();
+      }
+      box.appendChild(note);
+      const next = document.createElement('button'); next.textContent='Next'; next.onclick=()=>{ sfx.ok(); runNextEvent(); }; box.appendChild(next);
+    }
+
+    function ensureCardAdj(id){
+      if(!state.adjustments.byCard[id]) state.adjustments.byCard[id] = {value:0,risk:0,cost:0,fit:0,ttv:0};
+    }
+
+    // ---------- Finish & Scoring ----------
+    function finish(){
+      // Build effective picks
+      const chosen = initiatives.filter(x=>state.selected.has(x.id)).map(x=>({...x}));
+
+      // Apply constraint adjustments
+      const eff = chosen.map(x=>({...x}));
+      state.constraint.apply(eff, state.selected);
+
+      // Apply event per-card adjustments
+      for(const e of eff){
+        const adj = state.adjustments.byCard[e.id];
+        if(adj){
+          e.value = clamp(e.value + adj.value);
+          e.risk = clamp(e.risk + adj.risk);
+          e.fit = clamp(e.fit + adj.fit);
+          e.ttv = clamp(e.ttv + adj.ttv);
+        }
+      }
+
+      // Compute averages (convert each 1..5 to 0..100 by /5*100)
+      const avg = (arr, key)=> arr.length? arr.reduce((s,x)=>s+x[key],0)/arr.length : 0;
+      let v = avg(eff,'value')/5*100;
+      let r = avg(eff,'risk')/5*100; // higher is better (more reduction)
+      let f = avg(eff,'fit')/5*100;
+      let t = avg(eff,'ttv')/5*100;
+
+      // Cost discipline score
+      const used = totalCost(eff.map(x=>x.id));
+      let c = used<=state.allowedBudget ? 100 : (used<=state.allowedBudget+2?50:0);
+      if(used>=state.allowedBudget-1 && used<=state.allowedBudget) c = Math.min(100, c+10);
+
+      // Apply global event adjustments to metrics (risk mapped directly)
+      r = clampPct(r + state.adjustments.global.risk);
+      v = clampPct(v + state.adjustments.global.value);
+      f = clampPct(f + state.adjustments.global.fit);
+      t = clampPct(t + state.adjustments.global.ttv);
+
+      // Weighted final
+      const w = state.persona.weights;
+      let final = (v*w.value + r*w.risk + c*w.cost + f*w.fit + t*w.ttv)/100;
+      final = Math.max(0, Math.min(100, Math.round(final + state.adjustments.global.finalPenalty)));
+
+      // Render gauges
+      $('g-value').style.width = Math.round(v)+'%';
+      $('g-risk').style.width  = Math.round(r)+'%';
+      $('g-cost').style.width  = Math.round(c)+'%';
+      $('g-fit').style.width   = Math.round(f)+'%';
+      $('g-ttv').style.width   = Math.round(t)+'%';
+
+      $('final-score').textContent = `Final Score: ${final}/100`;
+      $('verdict').innerHTML = verdictText({v,r,c,f,t, final});
+
+      // Confetti wow
+      blastConfetti(); sfx.wow();
+
+      // Show context on score
+      $('context-score').innerHTML = `<span class=\"chip\" title=\"Selected persona\"><span class=\"avatar\">${avatarFor(state.persona.id)}</span> ${state.persona.name}</span>
+        <span class=\"chip\" title=\"${state.constraint.desc}\"><span class=\"dot\"></span> Constraint: ${state.constraint.title}</span>`;
+
+      // Wire controls
+      $('btn-replay').onclick=()=>{ location.reload(); };
+      $('btn-download-state').onclick=()=>{
+        const summary = summaryText({v,r,c,f,t,final});
+        navigator.clipboard.writeText(summary).then(()=>{
+          flash('Copied summary to clipboard.'); sfx.ok();
+        });
+      }
+
+      show('screen-events', false); show('screen-score', true);
+    }
+
+    function clampPct(x){ return Math.max(0, Math.min(100, x)); }
+
+    function verdictText(scores){
+      const best = Object.entries({Value:scores.v, Risk:scores.r, Cost:scores.c, Fit:scores.f, 'Time‑to‑Value':scores.t}).sort((a,b)=>b[1]-a[1])[0][0];
+      const worst = Object.entries({Value:scores.v, Risk:scores.r, Cost:scores.c, Fit:scores.f, 'Time‑to‑Value':scores.t}).sort((a,b)=>a[1]-b[1])[0][0];
+      const p = state.persona.name;
+      const hints = {
+        Value:'Prioritize initiatives tied to OKRs.',
+        Risk:'Invest in cyber & compliance automation.',
+        Cost:'Lean into FinOps and de-scoping.',
+        Fit:'Strengthen standards, patterns, and reuse.',
+        'Time‑to‑Value':'Favor smaller slices and pilots.',
+      };
+      return `<strong>${p} view:</strong> Your strongest area is <span class="warn">${best}</span>. Weakest is <span class="warn">${worst}</span>. ${hints[worst]}
+ <br><span class="small">Try a different mix to see how SPM (priorities/budget) + EA (guardrails) shift outcomes.</span>`;
+    }
+
+    function summaryText({v,r,c,f,t,final}){
+      const picked = [...state.selected].map(id=>initiatives.find(x=>x.id===id).name).join(', ');
+      return `Persona: ${state.persona.name}
+Constraint: ${state.constraint.title}
+Picks: ${picked}
+Scores → Value ${Math.round(v)}, Risk ${Math.round(r)}, Cost ${Math.round(c)}, Fit ${Math.round(f)}, TTV ${Math.round(t)}
+Final: ${final}/100`;
+    }
+
+    function show(id, on){ $(id).classList.toggle('hidden', !on); }
+
+    function flash(text){
+      const hint = $('hint') || $('event-desc');
+      hint.textContent = text;
+      hint.style.color = '#ffdba9';
+      setTimeout(()=>{hint.style.color='';},1200);
+    }
+    // Simple confetti
+    function blastConfetti(){
+      const root = $('confetti'); root.innerHTML='';
+      const N = 80; const colors = ['#3a7afe','#22c55e','#e879f9','#f59e0b','#06b6d4','#c7d2fe'];
+      for(let i=0;i<N;i++){
+        const d = document.createElement('div');
+        d.className='dot';
+        d.style.left = Math.random()*100+'vw';
+        d.style.top = -10+'px';
+        d.style.background = colors[i%colors.length];
+        d.style.transform = `translateY(0) rotate(${Math.random()*180}deg)`;
+        d.style.animationDelay = (Math.random()*0.4)+'s';
+        d.style.width = d.style.height = (6+Math.random()*8)+'px';
+        root.appendChild(d);
+      }
+      setTimeout(()=>{root.innerHTML='';}, 1800);
+    }
+
+    function show(id, on){ $(id).classList.toggle('hidden', !on); }
+
+    // Kickoff: focus first persona for accessibility
+    setTimeout(()=>{ const first = document.querySelector('.persona'); if(first) first.focus(); }, 0);
+  // --- Safety rebind for Start button ---
+    (function(){
+      const btn = $('btn-persona-next');
+      if(!btn) return;
+      btn.onclick = null; // clear any stray inline handlers
+      btn.addEventListener('click', ()=>{
+        try{
+          if(!state.persona){ flash('Pick a persona first.'); return; }
+          state.constraint = constraints[Math.floor(Math.random()*constraints.length)];
+          state.allowedBudget = 10 + (state.constraint.budgetDelta||0);
+          $('constraint-title').textContent = state.constraint.title;
+          $('constraint-desc').textContent = state.constraint.desc + (state.allowedBudget!==10?` (Budget now ${state.allowedBudget})`:'' );
+          $('context-constraint').innerHTML = `<span class="chip" title="Selected persona"><span class="avatar">${avatarFor(state.persona.id)}</span> ${state.persona.name}</span>`;
+          show('screen-persona', false); show('screen-constraint', true);
+          sfx.ok();
+        }catch(err){ console.error('Start click error:', err); flash('Could not continue: ' + (err && err.message ? err.message : String(err))); }
+      });
+    })();
+  </script>
+</body>
+</html>
