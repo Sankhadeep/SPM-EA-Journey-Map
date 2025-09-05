@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Village Adventure — SPM+EA</title>
+<style>
+:root{
+  --brand:#00c2ff; --bg:#0c1222; --glass:rgba(255,255,255,.06); --line:rgba(255,255,255,.12);
+  --text:#eaf2ff; --muted:#9fb0d8; --accent:#ffd86b; --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:radial-gradient(1200px 600px at 70% -10%, #1b2652 0%, var(--bg) 60%), var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.wrap{max-width:1280px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#9be2ff);box-shadow:0 6px 18px rgba(0,194,255,.35)}
+h1{margin:0;font-size:22px}
+.tag{color:var(--muted);font-size:13px}
+
+/* Layout */
+.topbar{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.topbar .step{font-weight:900;letter-spacing:.04em}
+.topbar.glow{box-shadow:0 0 0 0 rgba(0,194,255,.0),0 0 0 0 rgba(0,194,255,.0),0 0 0 0 rgba(0,194,255,.0);animation:glow 1.4s ease-out 1}
+@keyframes glow{0%{box-shadow:0 0 0 0 rgba(0,194,255,.6)}100%{box-shadow:0 0 0 16px rgba(0,194,255,0)}}
+
+.grid{display:grid;grid-template-columns:280px 1fr 320px;gap:12px;margin-top:12px}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.panel h3{margin:0 0 6px}
+.panel .small{font-size:12px;color:var(--muted)}
+
+/* Game stage */
+.stage{position:relative;background:#091527;border-radius:12px;border:1px solid var(--line);overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.45)}
+canvas#world{display:block;width:100%;height:100%;image-rendering: pixelated}
+.scan{position:absolute;inset:0;pointer-events:none;opacity:.18;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.06),rgba(255,255,255,.06) 1px,transparent 1px,transparent 3px)}
+.float{position:absolute;pointer-events:none;color:#fff;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.5); animation:up 900ms ease-out forwards}
+@keyframes up{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(-20px)}}
+
+/* Persona cards */
+.personas{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer}
+.card:hover{outline:2px solid var(--brand)}
+.card.selected{outline:2px solid var(--brand);box-shadow:0 0 0 6px rgba(0,194,255,.12)}
+
+/* Details stars */
+.stars{display:flex;gap:2px}
+.star{width:14px;height:14px;border-radius:3px;background:#2a3b6a;border:1px solid #3b4f86}
+.star.on{background:linear-gradient(180deg,#ffe58a,#ffcc3e)}
+.star.down{background:linear-gradient(180deg,#98ffb0,#1df29b)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 8px;align-items:center}
+.kv b{font-size:12px;color:#d7e7ff}
+
+/* Dialog (retro) */
+.dialog{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(0,0,0,.85);border:2px solid #2a385f;border-radius:10px;padding:10px;display:none}
+.dialog.show{display:block}
+.dialog .t{font-weight:900;margin-bottom:4px}
+.dialog .actions{display:flex;gap:8px;margin-top:6px}
+
+/* Score overlay */
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,8,16,.6);backdrop-filter:blur(2px);z-index:40}
+.overlay.show{display:flex}
+.sheet{width:min(820px,92vw);background:var(--glass);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 22px 60px rgba(0,0,0,.55)}
+.gaugegrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gauge{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px}
+.progress{height:14px;background:#1f2a5a;border-radius:999px;overflow:hidden}
+.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--brand));width:0%}
+
+button{background:var(--brand);border:none;border-radius:10px;padding:8px 12px;color:#001725;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(0,194,255,.25)}
+button.ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#eaf2ff;box-shadow:none}
+button[disabled]{opacity:.45;cursor:not-allowed}
+.small{font-size:12px;color:var(--muted)}
+
+/* Hideable sections */
+#screen-persona.hidden, #screen-game.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"></div>
+    <div>
+      <h1>Village Adventure — <span style="color:#9fe8ff">SPM + EA</span></h1>
+      <div class="tag">Retro town + modern panels • Choose persona → explore → commit 3 initiatives → face 2 events → weighted score.</div>
+    </div>
+  </header>
+
+  <!-- Persona selection -->
+  <section id="screen-persona" class="panel">
+    <h3>Step 1 — Choose your persona</h3>
+    <div class="small">Only three to keep things focused for the booth.</div>
+    <div id="persona-grid" class="personas" style="margin-top:10px"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px"><button id="btn-start" disabled>Enter the village</button></div>
+  </section>
+
+  <!-- Game layout -->
+  <section id="screen-game" class="hidden">
+    <div id="topbar" class="topbar"><div class="step" id="step-text">Step 2 — Talk to NPCs and choose 3 initiatives</div><div class="small">Arrows to move • E to interact • R to restart</div></div>
+
+    <div class="grid">
+      <aside class="panel">
+        <h3>HUD</h3>
+        <div class="small">Persona</div>
+        <div id="hud-persona" style="font-weight:900"></div>
+        <div class="small" style="margin-top:8px">Constraint</div>
+        <div id="hud-constraint"></div>
+        <div class="small" style="margin-top:8px">Progress</div>
+        <div id="hud-progress"></div>
+        <div class="small" style="margin-top:8px">Budget used</div>
+        <div id="hud-budget"></div>
+      </aside>
+
+      <main class="stage">
+        <canvas id="world" width="768" height="576"></canvas>
+        <div class="scan"></div>
+        <div id="dialog" class="dialog"><div class="t" id="dlg-title"></div><div id="dlg-body"></div><div class="actions" id="dlg-actions"></div></div>
+      </main>
+
+      <aside class="panel">
+        <h3>Initiative details</h3>
+        <div id="details-empty" class="small">Get near an NPC (signs outside shops) and press <b>E</b> to view details here.</div>
+        <div id="details" style="display:none">
+          <div id="det-name" style="font-weight:900;margin-bottom:6px"></div>
+          <div class="kv">
+            <b>Value</b><div class="stars" id="det-value"></div>
+            <b>Risk↓</b><div class="stars" id="det-risk"></div>
+            <b>Fit</b><div class="stars" id="det-fit"></div>
+            <b>TTV</b><div class="stars" id="det-ttv"></div>
+            <b>Cost</b><div id="det-cost"></div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="btn-commit">Commit to this</button>
+            <button class="ghost" id="btn-cancel">Cancel</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Score overlay -->
+  <div id="overlay" class="overlay">
+    <div class="sheet">
+      <h2 style="margin:0 0 6px">Results</h2>
+      <div class="gaugegrid" style="margin-top:10px">
+        <div class="gauge"><h4>Value</h4><div class="progress"><span id="g-value"></span></div></div>
+        <div class="gauge"><h4>Risk (lower is better)</h4><div class="progress"><span id="g-risk"></span></div></div>
+        <div class="gauge"><h4>Cost Discipline</h4><div class="progress"><span id="g-cost"></span></div></div>
+        <div class="gauge"><h4>Architecture Fit</h4><div class="progress"><span id="g-fit"></span></div></div>
+        <div class="gauge" style="grid-column:1 / -1"><h4>Time‑to‑Value</h4><div class="progress"><span id="g-ttv"></span></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px"><div id="final-score" style="font-size:28px;font-weight:900"></div><div id="verdict" class="small" style="margin-top:6px"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px">
+        <button class="ghost" id="btn-copy">Copy summary</button>
+        <div>
+          <button class="ghost" id="btn-replay">Play again</button>
+          <button id="btn-close">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================
+   Data & Configuration
+   All sprites, tiles and code are original in this file (CC0).
+   ===================== */
+const personas=[
+  {id:'hos',name:'Head of Strategy',focus:'Adoption & Value',weights:{value:30,risk:15,cost:10,fit:15,ttv:30}},
+  {id:'ea', name:'Enterprise Architect',focus:'Architecture & Risk',weights:{value:15,risk:30,cost:10,fit:35,ttv:10}},
+  {id:'pm', name:'Portfolio Manager',focus:'Value, Cost & TTV',weights:{value:30,risk:15,cost:25,fit:10,ttv:20}},
+];
+const initiatives={
+  ai:   {name:'AI Service Assistant', value:4, risk:2, fit:2, ttv:5, cost:2, fork:1, npcName:'AI Lab'},
+  cyber:{name:'Cyber Hardening',     value:3, risk:5, fit:5, ttv:3, cost:3, fork:1, npcName:'Security Office'},
+  erp:  {name:'ERP Consolidation',   value:3, risk:3, fit:4, ttv:2, cost:5, fork:2, npcName:'ERP Vendor'},
+  cost: {name:'Cloud Cost Optimization', value:2, risk:3, fit:5, ttv:4, cost:1, fork:2, npcName:'Cloud Consultant'},
+  data: {name:'Data Platform',       value:4, risk:2, fit:3, ttv:2, cost:4, fork:3, npcName:'Data Office'},
+  comp: {name:'Compliance Automation',value:3, risk:5, fit:4, ttv:3, cost:2, fork:3, npcName:'Compliance Officer'},
+};
+const constraints=[
+  {id:'cloud', title:'Cloud‑First Policy', desc:'Cloud‑aligned initiatives gain Architecture Fit; ERP loses a bit.', apply:(ctx)=>{ctx.flags.cloud=true;}},
+  {id:'freeze', title:'Hiring Freeze', desc:'Budget tight: budget cap reduced by 1 (9).', apply:(ctx)=>{ctx.budgetCap=9;}},
+  {id:'datares', title:'Data Residency Rule', desc:'If Data Platform without Compliance, risk reduction is weaker.', apply:(ctx)=>{ctx.flags.datares=true;}},
+];
+const events=[
+  {id:'cut', title:'Budget Cut — 20%', desc:'Leadership trims budget. Swap one decision?', run:evCut},
+  {id:'outage', title:'Critical Outage', desc:'Security incident tests resilience.', run:evOutage},
+  {id:'vendor', title:'Vendor Sunset', desc:'ERP vendor changes roadmap.', run:evVendor},
+  {id:'audit', title:'Audit Surprise', desc:'Regulator requests evidence earlier than planned.', run:evAudit},
+];
+
+/* =====================
+   State
+   ===================== */
+let state={persona:null,flags:{cloud:false,datares:false},budgetCap:10, picks:[], constraint:null, eventQueue:[], adj:{risk:0,value:0,fit:0,ttv:0,finalPenalty:0}};
+
+/* =====================
+   UI Helpers
+   ===================== */
+const $=id=>document.getElementById(id);
+function stars(el, n, down=false){ el.innerHTML=''; for(let i=1;i<=5;i++){ const s=document.createElement('div'); s.className='star'+(i<=n?' '+(down?'down':'on'):''); el.appendChild(s);} }
+function setStep(text){ const el=$('topbar'); $('step-text').textContent=text; el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); }
+function updateHUD(){
+  $('hud-persona').textContent = `${state.persona.name} — ${state.persona.focus}`;
+  $('hud-constraint').textContent = state.constraint? `${state.constraint.title}`: '—';
+  $('hud-progress').textContent = `Choices: ${state.picks.length}/3`;
+  const used = state.picks.reduce((s,p)=>s+initiatives[p.choice].cost,0);
+  $('hud-budget').textContent = `${used}/${state.budgetCap}`;
+}
+
+/* =====================
+   Persona Screen
+   ===================== */
+function buildPersona(){
+  const grid=$('persona-grid'); grid.innerHTML='';
+  personas.forEach(p=>{
+    const el=document.createElement('div'); el.className='card';
+    el.innerHTML=`<div class="small">${p.focus}</div><div style="font-weight:900;margin:4px 0">${p.name}</div>`;
+    el.onclick=()=>{ document.querySelectorAll('.card').forEach(x=>x.classList.remove('selected')); el.classList.add('selected'); state.persona=p; $('btn-start').disabled=false; };
+    grid.appendChild(el);
+  });
+  $('btn-start').onclick=()=>{ startGame(); };
+}
+
+/* =====================
+   World (Canvas) — tiles & sprites
+   ===================== */
+const cvs=$('world'), ctx=cvs.getContext('2d');
+const TILE=32, W= Math.floor(cvs.width/TILE), H=Math.floor(cvs.height/TILE);
+
+// Simple tiles: 0 grass,1 path,2 water,3 wall,4 roof,5 door,6 tree
+const map=[];
+for(let y=0;y<H;y++){
+  const row=[]; for(let x=0;x<W;x++){ let t=0; // borders trees
+    if(x===0||y===0||x===W-1||y===H-1) t=6; // plaza cross paths
+    if((y===Math.floor(H/2) && x>3 && x<W-4) || (x===Math.floor(W/2) && y>4 && y<H-4)) t=1; // main cross
+    // Shops
+    if(y>3&&y<9 && x>W-10 && x<W-3){ t=(y===4?4:(y===8?3:(x===W-4?3:(x===W-9?3:0)))) } // Market east
+    if(y>H-9&&y<H-3 && x>4 && x<11){ t=(y===H-8?4:(y===H-4?3:(x===5||x===10?3:0))) } // Town Hall south-west
+    if(y>H-9&&y<H-3 && x>W-12 && x<W-5){ t=(y===H-8?4:(y===H-4?3:(x===W-11||x===W-6?3:0))) } // Tech Shop south-east
+    // Elder house north
+    if(y>2&&y<7 && x>Math.floor(W/2)-3 && x<Math.floor(W/2)+4){ t=(y===3?4:(y===6?3:(x===Math.floor(W/2)-2||x===Math.floor(W/2)+3?3:0))) }
+    // Doors
+    if(y===8 && x===W-7) t=5; // Market
+    if(y===H-4 && x===7) t=5; // Town Hall
+    if(y===H-4 && x===W-8) t=5; // Tech Shop
+    if(y===6 && x===Math.floor(W/2)) t=5; // Elder
+    // Pond
+    if(x>3&&x<8 && y>3&&y<6) t=2;
+    row.push(t);
+  } map.push(row);
+}
+
+// NPC placements
+const NPCS=[
+  {id:'elder', x:Math.floor(W/2), y:7, type:'elder', name:'Village Elder'},
+  {id:'towncrier', x:Math.floor(W/2)-1, y:Math.floor(H/2), type:'crier', name:'Town Crier'},
+  // Fork 1: Tech Shop area (SE)
+  {id:'ai', x:W-7, y:H-5, type:'npc', title:'AI Lab', initiative:'ai'},
+  {id:'cyber', x:W-9, y:H-5, type:'npc', title:'Security Office', initiative:'cyber'},
+  // Fork 2: Market (E)
+  {id:'erp', x:W-7, y:9, type:'npc', title:'ERP Vendor', initiative:'erp'},
+  {id:'cost', x:W-9, y:9, type:'npc', title:'Cloud Consultant', initiative:'cost'},
+  // Fork 3: Town Hall (SW)
+  {id:'data', x:8, y:H-5, type:'npc', title:'Data Office', initiative:'data'},
+  {id:'comp', x:6, y:H-5, type:'npc', title:'Compliance Officer', initiative:'comp'},
+];
+
+// Player
+const player={x:Math.floor(W/2), y:Math.floor(H/2)+1, px:0, py:0, dir:'down', frame:0, moving:false};
+player.px=player.x*TILE; player.py=player.y*TILE;
+let keys={};
+addEventListener('keydown',e=>{ keys[e.key]=true; if(e.key==='r'||e.key==='R') location.reload(); if(e.key==='e'||e.key==='E') interact(); });
+addEventListener('keyup',e=>keys[e.key]=false);
+
+function tileBlocked(x,y){ const t=map[y]?.[x]??0; return t===2||t===3||t===4||t===6; }
+
+function update(){
+  const speed=3; let vx=0,vy=0; if(keys['ArrowLeft']){vx=-1;player.dir='left'} if(keys['ArrowRight']){vx=1;player.dir='right'} if(keys['ArrowUp']){vy=-1;player.dir='up'} if(keys['ArrowDown']){vy=1;player.dir='down'}
+  player.moving = (vx||vy)?true:false; if(vx&&vy){vx*=0.7;vy*=0.7}
+  const nx=player.px+vx*speed, ny=player.py+vy*speed; const tx=Math.floor(nx/TILE), ty=Math.floor(ny/TILE);
+  if(!tileBlocked(tx,Math.floor(player.py/TILE))) player.px=nx; if(!tileBlocked(Math.floor(player.px/TILE),ty)) player.py=ny;
+  player.x=Math.floor(player.px/TILE); player.y=Math.floor(player.py/TILE); if(player.moving) player.frame=(player.frame+0.2)%2;
+}
+
+function draw(){ ctx.clearRect(0,0,cvs.width,cvs.height);
+  // tiles
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) drawTile(x,y,map[y][x]);
+  // NPCs
+  for(const n of NPCS) drawNPC(n);
+  // player
+  drawPlayer();
+}
+
+function drawTile(x,y,t){ const X=x*TILE, Y=y*TILE; if(t===0){ // grass
+    const g=ctx.createLinearGradient(0,Y,0,Y+TILE); g.addColorStop(0,'#1f6b38'); g.addColorStop(1,'#17562d'); ctx.fillStyle=g; ctx.fillRect(X,Y,TILE,TILE); ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(X+6,Y+6,4,4);
+  } else if(t===1){ ctx.fillStyle='#cda56e'; ctx.fillRect(X,Y,TILE,TILE); ctx.fillStyle='#b7894d'; ctx.fillRect(X,Y+TILE-6,TILE,6);
+  } else if(t===2){ const g=ctx.createLinearGradient(X,Y,X,Y+TILE); g.addColorStop(0,'#2a8cff'); g.addColorStop(1,'#1b6fd1'); ctx.fillStyle=g; ctx.fillRect(X,Y,TILE,TILE);
+  } else if(t===3){ ctx.fillStyle='#7e868f'; ctx.fillRect(X,Y,TILE,TILE); ctx.fillStyle='#596270'; ctx.fillRect(X+2,Y+TILE-5,TILE-4,5);
+  } else if(t===4){ ctx.fillStyle='#b84c4c'; ctx.fillRect(X,Y,TILE,TILE); ctx.fillStyle='#d66a6a'; ctx.fillRect(X,Y+2,TILE,3);
+  } else if(t===5){ ctx.fillStyle='#55361f'; ctx.fillRect(X,Y,TILE,TILE); ctx.fillStyle='#2b2118'; ctx.fillRect(X+10,Y+10,12,12);
+  } else if(t===6){ // tree
+    ctx.fillStyle='#0f3a1a'; ctx.fillRect(X,Y,TILE,TILE); ctx.fillStyle='#135125'; ctx.beginPath(); ctx.arc(X+16,Y+16,12,0,Math.PI*2); ctx.fill();
+  }}
+
+function drawNPC(n){ const X=n.x*TILE, Y=n.y*TILE; // tiny humanoid sprite
+  ctx.save();
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(X+16,Y+28,10,4,0,0,Math.PI*2); ctx.fill();
+  // body
+  ctx.fillStyle='#ffd86b'; ctx.fillRect(X+12,Y+10,8,8); // head
+  ctx.fillStyle='#2a3b6a'; ctx.fillRect(X+10,Y+18,12,10); // torso
+  ctx.fillStyle='#4662a8'; ctx.fillRect(X+10,Y+28,5,6); ctx.fillRect(X+17,Y+28,5,6); // legs
+  // face
+  ctx.fillStyle='#222'; ctx.fillRect(X+14,Y+13,2,2); ctx.fillRect(X+18,Y+13,2,2);
+  // title
+  ctx.fillStyle='rgba(0,0,0,.4)'; ctx.fillRect(X-6,Y-14,44,14);
+  ctx.fillStyle='#cfe1ff'; ctx.font='10px sans-serif'; ctx.fillText(n.title||n.name, X-4, Y-4);
+  ctx.restore();
+}
+
+function drawPlayer(){ const X=player.px, Y=player.py; ctx.save();
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(X+16,Y+28,10,4,0,0,Math.PI*2); ctx.fill();
+  // head
+  ctx.fillStyle='#ffe1a8'; ctx.fillRect(X+12,Y+8,8,8);
+  // eyes
+  ctx.fillStyle='#222'; if(player.dir==='left'){ ctx.fillRect(X+14,Y+11,2,2);} else if(player.dir==='right'){ ctx.fillRect(X+18,Y+11,2,2);} else { ctx.fillRect(X+15,Y+11,2,2); }
+  // body
+  ctx.fillStyle='#38bdf8'; ctx.fillRect(X+10,Y+16,12,12); // torso
+  // arms
+  ctx.fillStyle='#ffe1a8'; if(Math.floor(player.frame)%2===0){ ctx.fillRect(X+8,Y+18,4,6); ctx.fillRect(X+22,Y+18,4,6);} else { ctx.fillRect(X+8,Y+20,4,6); ctx.fillRect(X+22,Y+20,4,6);} 
+  // legs
+  ctx.fillStyle='#1d4ed8'; if(Math.floor(player.frame)%2===0){ ctx.fillRect(X+10,Y+28,5,8); ctx.fillRect(X+17,Y+28,5,8);} else { ctx.fillRect(X+10,Y+30,5,8); ctx.fillRect(X+17,Y+26,5,8);} 
+  ctx.restore();
+}
+
+/* =====================
+   Interaction & Details Panel
+   ===================== */
+let currentNPC=null; let pendingChoice=null;
+function nearestNPC(){ return NPCS.find(n=> Math.abs(n.x-player.x)<=1 && Math.abs(n.y-player.y)<=1 && (n.type==='npc'||n.type==='elder'||n.type==='crier')); }
+function interact(){ const n=nearestNPC(); if(!n) return; if(n.type==='npc'){ showDetails(n); } else if(n.type==='elder'){ if(state.picks.length===3){ finish(); } else openDialog('Elder','Choose all three initiatives, then return here.',[{label:'Okay',action:closeDialog}]); } else if(n.type==='crier'){ openDialog('Town Crier','News will appear here after your choices!',[{label:'Okay',action:closeDialog}]); } }
+
+function showDetails(n){ const init=initiatives[n.initiative]; const fork=init.fork; if(state.picks.find(p=>initiatives[p.choice].fork===fork)) { openDialog(n.title,'This fork is already decided.',[{label:'Okay',action:closeDialog}]); return; }
+  currentNPC=n; pendingChoice=n.initiative; $('details-empty').style.display='none'; $('details').style.display='block';
+  $('det-name').textContent = `${init.name} — (${n.title})`;
+  stars($('det-value'), init.value);
+  stars($('det-risk'), init.risk, true);
+  stars($('det-fit'), init.fit);
+  stars($('det-ttv'), init.ttv);
+  $('det-cost').textContent = init.cost;
+  $('btn-commit').onclick=()=> commitChoice();
+  $('btn-cancel').onclick=()=> { $('details').style.display='none'; $('details-empty').style.display='block'; };
+}
+
+function commitChoice(){ if(!pendingChoice) return; const init=initiatives[pendingChoice]; state.picks.push({fork:init.fork, choice:pendingChoice}); floatText(`+ ${init.name}`); $('details').style.display='none'; $('details-empty').style.display='block'; pendingChoice=null; currentNPC=null; updateHUD(); setStep(`Step 2 — Choose initiatives (${state.picks.length}/3)`);
+  if(state.picks.length===3){ setStep('Step 3 — Handle 2 surprise events'); state.eventQueue = shuffle(events).slice(0,2); runNextEvent(); }
+}
+
+function floatText(text){ const st=document.querySelector('.stage'); const f=document.createElement('div'); f.className='float'; f.textContent=text; const rect=cvs.getBoundingClientRect(); f.style.left = (rect.left + (player.x+0.5)*TILE) + 'px'; f.style.top = (rect.top + (player.y)*TILE - 8) + 'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),900); }
+
+/* =====================
+   Dialogs & Events
+   ===================== */
+function openDialog(title, body, actions){ $('dlg-title').textContent=title; $('dlg-body').textContent=body; const box=$('dlg-actions'); box.innerHTML=''; actions.forEach(a=>{ const b=document.createElement('button'); b.className=a.ghost?'ghost':''; b.textContent=a.label; b.onclick=a.action; box.appendChild(b); }); $('dialog').classList.add('show'); }
+function closeDialog(){ $('dialog').classList.remove('show'); }
+
+function runNextEvent(){ if(state.eventQueue.length===0){ setStep('Step 4 — Visit the Elder for results'); return; } const ev=state.eventQueue.shift(); openDialog(ev.title, ev.desc, [{label:'Proceed',action:()=>{ closeDialog(); ev.run(); }}]); }
+function evCut(){ const used=state.picks.reduce((s,p)=>s+initiatives[p.choice].cost,0); const swapFork=[1,2,3][Math.floor(Math.random()*3)]; const current=state.picks.find(p=>p.fork===swapFork).choice; const alt= swapFork===1?(current==='ai'?'cyber':'ai') : swapFork===2?(current==='erp'?'cost':'erp') : (current==='data'?'comp':'data'); openDialog('Budget Cut',`Budget used ${used}/${state.budgetCap}. Swap one decision?`,[
+  {label:`Swap Fork ${swapFork} → ${initiatives[alt].name}`, action:()=>{ state.picks=state.picks.map(p=> p.fork===swapFork?{fork:swapFork,choice:alt}:p); closeDialog(); updateHUD(); runNextEvent(); }},
+  {label:'Keep', action:()=>{ closeDialog(); runNextEvent(); }, ghost:true}
+]); }
+function evOutage(){ const hasCyber=!!state.picks.find(p=>p.choice==='cyber'); if(hasCyber){ state.adj.risk+=3; openDialog('Outage','Hardening pays off. Risk improves (+3).',[{label:'Next',action:()=>{ closeDialog(); runNextEvent(); }}]); } else { state.adj.risk-=8; openDialog('Outage','Incident hurts (−8 Risk).',[{label:'Next',action:()=>{ closeDialog(); runNextEvent(); }}]); } }
+function evVendor(){ const hasERP=!!state.picks.find(p=>p.choice==='erp'); if(hasERP){ state.adj.value+=2; state.adj.ttv-=1; openDialog('Vendor Sunset','ERP value +2, TTV −1.',[{label:'Next',action:()=>{ closeDialog(); runNextEvent(); }}]); } else { openDialog('Vendor Sunset','ERP not in scope — minimal impact.',[{label:'Next',action:()=>{ closeDialog(); runNextEvent(); }}]); } }
+function evAudit(){ const hasComp=!!state.picks.find(p=>p.choice==='comp'); if(hasComp){ state.adj.risk+=3; openDialog('Audit Surprise','Automated evidence: Risk improves (+3).',[{label:'Next',action:()=>{ closeDialog(); runNextEvent(); }}]); } else { state.adj.finalPenalty-=10; openDialog('Audit Surprise','No automation — final score penalty (−10).',[{label:'Next',action:()=>{ closeDialog(); runNextEvent(); }}]); } }
+
+/* =====================
+   Scoring & Overlay
+   ===================== */
+function finish(){ // if constraint not set, set once now
+  if(!state.constraint){ state.constraint=constraints[Math.floor(Math.random()*constraints.length)]; state.constraint.apply(state);} 
+  // Effective metrics
+  const picks=state.picks.map(p=>({id:p.choice, ...initiatives[p.choice], fork:initiatives[p.choice].fork}));
+  // Constraints
+  picks.forEach(it=>{ if(state.flags.cloud){ if(['ai','cost','data'].includes(it.id)) it.fit=Math.min(5,it.fit+1); if(it.id==='erp') it.fit=Math.max(1,it.fit-1);} if(state.flags.datares && it.id==='data' && !state.picks.find(p=>p.choice==='comp')) it.risk=Math.max(1,it.risk-2); });
+  // Early TTV bonus
+  state.picks.forEach(p=>{ const it=picks.find(x=>x.id===p.choice); it.ttv=Math.min(5,it.ttv + (p.fork===1?2:(p.fork===2?1:0))); });
+  // Averages 0..100
+  const avg=(arr,k)=>arr.reduce((s,x)=>s+x[k],0)/arr.length; let v=avg(picks,'value')/5*100; let r=avg(picks,'risk')/5*100; let f=avg(picks,'fit')/5*100; let t=avg(picks,'ttv')/5*100;
+  const used=state.picks.reduce((s,p)=>s+initiatives[p.choice].cost,0); let c= used<=state.budgetCap?100:(used<=state.budgetCap+2?50:0); if(used>=state.budgetCap-1 && used<=state.budgetCap) c=Math.min(100,c+10);
+  v=Math.max(0,Math.min(100,v+state.adj.value)); r=Math.max(0,Math.min(100,r+state.adj.risk)); f=Math.max(0,Math.min(100,f+state.adj.fit)); t=Math.max(0,Math.min(100,t+state.adj.ttv));
+  const w=state.persona.weights; let final=(v*w.value + r*w.risk + c*w.cost + f*w.fit + t*w.ttv)/100; final=Math.round(Math.max(0,Math.min(100, final + state.adj.finalPenalty)));
+  // Render overlay
+  const setW=(id,p)=>{ const el=$(id); let cur=0; const step=()=>{ cur+=Math.max(1,Math.round((p-cur)/6)); el.style.width=cur+'%'; if(cur<p) requestAnimationFrame(step); }; step(); };
+  setW('g-value',Math.round(v)); setW('g-risk',Math.round(r)); setW('g-cost',Math.round(c)); setW('g-fit',Math.round(f)); setW('g-ttv',Math.round(t));
+  $('final-score').textContent=`Final Score: ${final}/100`;
+  const best=Object.entries({Value:v,Risk:r,Cost:c,Fit:f,'Time‑to‑Value':t}).sort((a,b)=>b[1]-a[1])[0][0];
+  const worst=Object.entries({Value:v,Risk:r,Cost:c,Fit:f,'Time‑to‑Value':t}).sort((a,b)=>a[1]-b[1])[0][0];
+  $('verdict').innerHTML=`<b>${state.persona.name}</b> view — strongest <span style="color:#ffdba9">${best}</span>, weakest <span style="color:#ffdba9">${worst}</span>.`;
+  $('overlay').classList.add('show');
+  $('btn-close').onclick=()=>$('overlay').classList.remove('show');
+  $('btn-replay').onclick=()=>location.reload();
+  $('btn-copy').onclick=()=>{ const names=state.picks.map(p=>initiatives[p.choice].name).join(', '); const txt=`Persona: ${state.persona.name}\nConstraint: ${state.constraint.title}\nChoices: ${names}\nScores → V ${Math.round(v)} R ${Math.round(r)} C ${Math.round(c)} F ${Math.round(f)} T ${Math.round(t)}\nFinal: ${final}/100`; navigator.clipboard.writeText(txt).then(()=>alert('Summary copied')); };
+  confetti();
+}
+
+/* =====================
+   Events: confetti
+   ===================== */
+function confetti(){ const c=document.createElement('canvas'); c.width=innerWidth; c.height=innerHeight; c.style.position='fixed'; c.style.inset='0'; c.style.pointerEvents='none'; c.style.zIndex=60; document.body.appendChild(c); const x=c.getContext('2d'); const parts=[]; for(let i=0;i<140;i++) parts.push({x:Math.random()*c.width,y:-20-Math.random()*c.height*.2,vx:(Math.random()-.5)*2,vy:2+Math.random()*3,a:1,s:2+Math.random()*4,color:`hsl(${180+Math.random()*120} 90% 60%)`}); let t=0; (function tick(){ x.clearRect(0,0,c.width,c.height); t++; let alive=false; for(const p of parts){ p.x+=p.vx; p.y+=p.vy; p.vy*=0.99; p.a*=0.994; if(p.y<c.height+20 && p.a>0.02){ alive=true; x.globalAlpha=p.a; x.fillStyle=p.color; x.fillRect(p.x,p.y,p.s,p.s);} } if(alive&&t<420) requestAnimationFrame(tick); else { x.clearRect(0,0,c.width,c.height); c.remove(); } })(); }
+
+/* =====================
+   Game start
+   ===================== */
+function startGame(){ $('screen-persona').classList.add('hidden'); $('screen-game').classList.remove('hidden'); setStep('Step 2 — Talk to NPCs and choose 3 initiatives');
+  // roll a constraint up front
+  state.constraint = constraints[Math.floor(Math.random()*constraints.length)]; state.flags={cloud:false,datares:false}; state.budgetCap=10; state.picks=[]; state.adj={risk:0,value:0,fit:0,ttv:0,finalPenalty:0}; state.constraint.apply(state);
+  updateHUD();
+}
+
+/* =====================
+   Loop
+   ===================== */
+(function loop(){ requestAnimationFrame(loop); update(); draw(); })();
+
+/* =====================
+   Utils
+   ===================== */
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]); }
+
+// boot persona screen
+buildPersona();
+</script>
+</body>
+</html>
